@@ -7,7 +7,9 @@ WORKDIR /app
 
 COPY pyproject.toml uv.lock ./
 RUN pip install --no-cache-dir uv
-RUN uv sync --non-interactive
+RUN yes | uv sync
+ENV PATH="/app/.venv/bin:$PATH"
+RUN pip install --no-cache-dir gunicorn
 
 COPY . /app
 

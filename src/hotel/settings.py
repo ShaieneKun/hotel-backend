@@ -24,6 +24,7 @@ INSTALLED_APPS = [
     "django_celery_beat",
     "django_celery_results",
     "reservations",
+    'drf_spectacular',
 ]
 
 MIDDLEWARE = [
@@ -80,6 +81,7 @@ REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
 SIMPLE_JWT = {

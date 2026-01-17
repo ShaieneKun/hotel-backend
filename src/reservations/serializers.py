@@ -28,6 +28,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         user.set_password(password)
         user.save()
         # signals may already create a Profile; avoid duplicate unique constraint
+        # TODO remove this
         Profile.objects.get_or_create(user=user, defaults={"role": role})
         return user
 

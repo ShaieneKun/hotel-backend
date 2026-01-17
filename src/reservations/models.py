@@ -45,4 +45,4 @@ class Reservation(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"Reservation {self.id} - {self.guest.username} ({self.room.number})"
+        return f"Reservation {self.pk} - {self.guest.username} ({self.room.number})"
