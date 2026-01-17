@@ -22,11 +22,14 @@ def send_test_email_task():
 @shared_task
 def send_reservation_confirmation(reservation_id: int):
     """Send confirmation email after successful reservation creation."""
+    print(f"Reservation ID: {reservation_id}")
     try:
         reservation = Reservation.objects.select_related(
             "guest", "room").get(id=reservation_id)
     except Reservation.DoesNotExist:
         return False
+
+    print("After try except")
 
     subject = f"Reservation Confirmation #{reservation.pk}"
     body = (
@@ -40,13 +43,24 @@ def send_reservation_confirmation(reservation_id: int):
         f"Status: {reservation.get_status_display()}\n\n"
         "Thank you for choosing our hotel!\n"
     )
-    send_mail(
+
+    print("After subject and body")
+
+    emails = [reservation.guest.email, "test@email.com"]
+    print(subject,
+          body,
+          settings.DEFAULT_FROM_EMAIL,
+          emails)
+
+    send_email_return = send_mail(
         subject,
         body,
         settings.DEFAULT_FROM_EMAIL,
-        [reservation.guest.email],
+        emails,
         fail_silently=False
     )
+
+    print(f"After send email. Result: {send_email_return}")
     return True
 
 
@@ -69,6 +83,7 @@ def send_checkin_reminder(reservation_id: int):
         "Please arrive at least 15 minutes early for check-in.\n"
         "Thank you!\n"
     )
+
     send_mail(
         subject,
         body,
