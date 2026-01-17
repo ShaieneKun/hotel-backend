@@ -1,26 +1,4 @@
 services:
-  devcontainer:
-    image: mcr.microsoft.com/devcontainers/python:2-3.14-trixie
-    working_dir: /workspaces/hotel-backend
-    volumes:
-      - .:/workspaces/hotel-backend
-    environment:
-      - DEVCONTAINER=true
-      - DB_HOST=db
-      - DB_NAME=hotel
-      - DB_USER=hotel
-      - DB_PASSWORD=hotel_password
-      - DB_PORT=5432
-      - REDIS_HOST=redis
-      - DJANGO_SETTINGS_MODULE=hotel.settings
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    command: /bin/bash
-    stdin_open: true
-    tty: true
 
   db:
     image: postgres:16-alpine
@@ -37,6 +15,8 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - hotel-network
 
   redis:
     image: redis:7-alpine
@@ -47,6 +27,8 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+    networks:
+      - hotel-network
 
   web:
     build: .
@@ -67,6 +49,8 @@ services:
       - DB_PORT=5432
     profiles:
       - web
+    networks:
+      - hotel-network
 
   celery:
     build:
@@ -85,6 +69,8 @@ services:
       - DB_PASSWORD=hotel_password
       - DB_HOST=db
       - DB_PORT=5432
+    networks:
+      - hotel-network
 
   beat:
     build:
@@ -103,6 +89,12 @@ services:
       - DB_PASSWORD=hotel_password
       - DB_HOST=db
       - DB_PORT=5432
+    networks:
+      - hotel-network
 
 volumes:
   postgres_data:
+
+networks:
+  hotel-network:
+    driver: bridge
