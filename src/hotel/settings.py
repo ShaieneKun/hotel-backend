@@ -100,8 +100,14 @@ DEFAULT_FROM_EMAIL = "noreply@hotel.local"
 
 
 CELERY_BEAT_SCHEDULE = {
-    "release-expired-reservations": {
-        "task": "reservations.tasks.release_expired_reservations",
-        "schedule": crontab(hour=0, minute=0),
-    }
+    "cleanup-expired-reservations": {
+        "task": "reservations.tasks.cleanup_expired_reservations",
+        "schedule": crontab(hour=0, minute=0),  # Daily at midnight
+        "options": {"expires": 3600}
+    },
+    "mark-rooms-available-after-cleaning": {
+        "task": "reservations.tasks.mark_rooms_available_after_cleaning",
+        "schedule": crontab(hour="*/3", minute=0),  # Every 3 hours
+        "options": {"expires": 600}
+    },
 }

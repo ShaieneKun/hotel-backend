@@ -1,5 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
+from django.utils import timezone
 
 
 class Profile(models.Model):
@@ -16,23 +18,47 @@ class Profile(models.Model):
     def __str__(self):
         return f"{self.user.username} ({self.role})"
 
+    def is_admin(self):
+        return self.role == "admin"
+
+    def is_staff(self):
+        return self.role == "staff"
+
+    def is_client(self):
+        return self.role == "client"
+
 
 class Room(models.Model):
+    ROOM_STATUS_CHOICES = (
+        ("available", "Available"),
+        ("occupied", "Occupied"),
+        ("cleaning", "Cleaning/Maintenance"),
+        ("blocked", "Blocked"),
+    )
     number = models.CharField(max_length=10, unique=True)
     room_type = models.CharField(max_length=50)
     capacity = models.PositiveSmallIntegerField(default=1)
     price = models.DecimalField(max_digits=8, decimal_places=2)
     is_active = models.BooleanField(default=True)
+    status = models.CharField(
+        max_length=20, choices=ROOM_STATUS_CHOICES, default="available")
 
     def __str__(self):
         return f"Room {self.number} ({self.room_type})"
 
+    @property
+    def is_available(self):
+        """Check if room is available for booking."""
+        return self.status == "available" and self.is_active
+
 
 class Reservation(models.Model):
     STATUS = (
-        ("reserved", "Reserved"),
+        ("confirmed", "Confirmed"),
+        ("checked_in", "Checked In"),
+        ("checked_out", "Checked Out"),
         ("cancelled", "Cancelled"),
-        ("checked_out", "Checked out"),
+        ("no_show", "No-Show"),
     )
     room = models.ForeignKey(
         Room, on_delete=models.PROTECT, related_name="reservations")
@@ -41,8 +67,57 @@ class Reservation(models.Model):
     check_in = models.DateTimeField()
     check_out = models.DateTimeField()
     status = models.CharField(
-        max_length=20, choices=STATUS, default="reserved")
+        max_length=20, choices=STATUS, default="confirmed")
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["room", "status", "check_in"]),
+            models.Index(fields=["guest", "status"]),
+        ]
 
     def __str__(self):
         return f"Reservation {self.pk} - {self.guest.username} ({self.room.number})"
+
+    def clean(self):
+        """Validate that room is not double-booked."""
+        if not self.check_in or not self.check_out:
+            return
+
+        if self.check_in >= self.check_out:
+            raise ValidationError("Check-in must be before check-out.")
+
+        # Prevent double booking: find conflicting reservations
+        conflicting = Reservation.objects.filter(
+            room=self.room,
+            status__in=["confirmed", "checked_in"],
+            check_in__lt=self.check_out,
+            check_out__gt=self.check_in,
+        )
+        if self.pk:
+            conflicting = conflicting.exclude(pk=self.pk)
+
+        if conflicting.exists():
+            raise ValidationError(
+                f"Room {self.room.number} is already booked for the selected dates."
+            )
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
+
+    @property
+    def is_past_checkin(self):
+        """Check if check-in date has passed."""
+        return self.check_in <= timezone.now()
+
+    @property
+    def is_past_checkout(self):
+        """Check if check-out date has passed."""
+        return self.check_out <= timezone.now()
+
+    def get_status_display(self):
+        """Return the human-readable status."""
+        return dict(self.STATUS).get(self.status, self.status)

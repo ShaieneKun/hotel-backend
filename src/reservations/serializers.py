@@ -34,10 +34,16 @@ class RegisterSerializer(serializers.ModelSerializer):
 
 
 class RoomSerializer(serializers.ModelSerializer):
+    is_available = serializers.SerializerMethodField()
+
     class Meta:
         model = Room
         fields = ("id", "number", "room_type",
-                  "capacity", "price", "is_active")
+                  "capacity", "price", "is_active", "status", "is_available")
+        read_only_fields = ("is_available",)
+
+    def get_is_available(self, obj):
+        return obj.is_available
 
 
 class ReservationSerializer(serializers.ModelSerializer):
@@ -46,6 +52,8 @@ class ReservationSerializer(serializers.ModelSerializer):
     room_id = serializers.PrimaryKeyRelatedField(
         source="room", queryset=Room.objects.filter(is_active=True), write_only=True
     )
+    is_past_checkin = serializers.SerializerMethodField()
+    is_past_checkout = serializers.SerializerMethodField()
 
     class Meta:
         model = Reservation
@@ -58,8 +66,44 @@ class ReservationSerializer(serializers.ModelSerializer):
             "check_out",
             "status",
             "created_at",
+            "updated_at",
+            "is_past_checkin",
+            "is_past_checkout",
         )
-        read_only_fields = ("status", "created_at")
+        read_only_fields = ("status", "created_at", "updated_at",
+                            "is_past_checkin", "is_past_checkout")
+
+    def get_is_past_checkin(self, obj):
+        return obj.is_past_checkin
+
+    def get_is_past_checkout(self, obj):
+        return obj.is_past_checkout
+
+    def validate(self, data):
+        """Validate the reservation dates and double-booking."""
+        check_in = data.get("check_in")
+        check_out = data.get("check_out")
+        room = data.get("room")
+
+        if check_in and check_out:
+            if check_in >= check_out:
+                raise serializers.ValidationError(
+                    "Check-in must be before check-out."
+                )
+
+            # Check for conflicts
+            conflicting = Reservation.objects.filter(
+                room=room,
+                status__in=["confirmed", "checked_in"],
+                check_in__lt=check_out,
+                check_out__gt=check_in,
+            )
+            if conflicting.exists():
+                raise serializers.ValidationError(
+                    f"Room {room.number} is already booked for the selected dates."
+                )
+
+        return data
 
     def create(self, validated_data):
         user = self.context["request"].user
