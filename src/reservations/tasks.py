@@ -1,9 +1,22 @@
+from .models import Reservation, Room
+from datetime import timedelta
+from django.utils import timezone
 from celery import shared_task
+
+
 from django.core.mail import send_mail
 from django.conf import settings
-from django.utils import timezone
-from datetime import timedelta
-from .models import Reservation, Room
+
+
+@shared_task
+def send_test_email_task():
+    subject = 'Test Email from Django via Celery'
+    message = 'This is a test email sent from a Celery task.'
+    from_email = settings.DEFAULT_FROM_EMAIL
+    recipient_list = ['test@localhost']
+    send_mail(subject, message, from_email,
+              recipient_list, fail_silently=False)
+    return True
 
 
 @shared_task

@@ -47,6 +47,8 @@ services:
       - DB_PASSWORD=hotel_password
       - DB_HOST=db
       - DB_PORT=5432
+      - EMAIL_HOST=mailpit
+      - EMAIL_PORT=1025
     profiles:
       - web
     networks:
@@ -70,6 +72,8 @@ services:
       - DB_HOST=db
       - DB_PORT=5432
       - REDIS_HOST=host.docker.internal
+      - EMAIL_HOST=mailpit
+      - EMAIL_PORT=1025
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:
@@ -92,9 +96,19 @@ services:
       - DB_PASSWORD=hotel_password
       - DB_HOST=db
       - DB_PORT=5432
+      - EMAIL_HOST=mailpit
+      - EMAIL_PORT=1025
       - REDIS_HOST=host.docker.internal
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    networks:
+      - hotel-network
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "8025:8025"  # Web UI
+      - "1025:1025"  # SMTP
     networks:
       - hotel-network
 
