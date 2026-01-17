@@ -13,4 +13,5 @@ dependencies = [
     "django-celery-beat",
     "django-celery-results",
     "drf-spectacular>=0.29.0",
+    "django-cors-headers>=4.9.0",
 ]
