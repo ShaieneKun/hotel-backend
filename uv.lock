@@ -257,6 +257,7 @@ dependencies = [
     { name = "drf-spectacular" },
     { name = "gunicorn" },
     { name = "psycopg", extra = ["binary"] },
+    { name = "pytz" },
     { name = "redis" },
 ]
 
@@ -272,6 +273,7 @@ requires-dist = [
     { name = "drf-spectacular", specifier = ">=0.29.0" },
     { name = "gunicorn", specifier = ">=23.0.0" },
     { name = "psycopg", extras = ["binary"] },
+    { name = "pytz", specifier = ">=2024.2" },
     { name = "redis" },
 ]
 

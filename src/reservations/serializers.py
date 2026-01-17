@@ -27,9 +27,12 @@ class RegisterSerializer(serializers.ModelSerializer):
         user = User.objects.create(**validated_data)
         user.set_password(password)
         user.save()
-        # signals may already create a Profile; avoid duplicate unique constraint
-        # TODO remove this
-        Profile.objects.get_or_create(user=user, defaults={"role": role})
+        # Profile may already be created by signal; update role if needed
+        profile, _ = Profile.objects.get_or_create(
+            user=user, defaults={"role": role})
+        if profile.role != role:
+            profile.role = role
+            profile.save()
         return user
 
 
@@ -65,12 +68,13 @@ class ReservationSerializer(serializers.ModelSerializer):
             "check_in",
             "check_out",
             "status",
+            "total_price",
             "created_at",
             "updated_at",
             "is_past_checkin",
             "is_past_checkout",
         )
-        read_only_fields = ("status", "created_at", "updated_at",
+        read_only_fields = ("status", "total_price", "created_at", "updated_at",
                             "is_past_checkin", "is_past_checkout")
 
     def get_is_past_checkin(self, obj):

@@ -1,20 +1,48 @@
-FROM python:3.14-slim
+# =============================================================================
+# Hotel Backend - Main Dockerfile
+# =============================================================================
+# This Dockerfile is used for the main web application (Django/Gunicorn)
+# =============================================================================
 
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-ENV PYTHONPATH=/app/src
+FROM python:3.14-slim AS base
+
+# Environment variables for Python
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app/src
 
 WORKDIR /app
 
-# Copy dependency files
-COPY ./pyproject.toml ./uv.lock* ./
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install uv and sync dependencies (this creates .venv automatically)
-RUN pip install --no-cache-dir uv && \
-    uv sync --frozen
+# Install uv package manager
+RUN pip install --no-cache-dir uv
+
+# Copy dependency files first (for layer caching)
+COPY pyproject.toml uv.lock* ./
+
+# Sync dependencies (creates .venv automatically)
+RUN uv sync --frozen
 
 # Copy application code
 COPY . /app
 
-# Use the venv's python directly with gunicorn module
-CMD ["python", "-m", "gunicorn", "hotel.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "4"]
+# Copy and set permissions for entrypoint script
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
+# Create directory for static files
+RUN mkdir -p /app/staticfiles
+
+# Set working directory to src for Django
+WORKDIR /app/src
+
+# Expose port
+EXPOSE 8000
+
+# Default command: run entrypoint then gunicorn
+ENTRYPOINT ["/app/entrypoint.sh"]
+CMD ["/app/.venv/bin/python", "-m", "gunicorn", "hotel.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "4", "--timeout", "120"]

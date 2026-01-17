@@ -144,15 +144,13 @@ class ReservationViewSet(viewsets.ModelViewSet):
         reservation.save()
 
         # Release room back to available if it was confirmed
-        if reservation.status == "confirmed" and reservation.room.status != "available":
+        if reservation.room.status != "available":
             reservation.room.status = "available"
             reservation.room.save()
 
-        return Response({
-            "id": reservation.id,
-            "status": reservation.status,
-            "message": "Reservation cancelled successfully"
-        })
+        # Return full serialized reservation
+        serializer = self.get_serializer(reservation)
+        return Response(serializer.data)
 
     @action(detail=True, methods=["post"], permission_classes=[IsAdminOrStaff])
     def check_in(self, request, pk=None):
@@ -181,12 +179,9 @@ class ReservationViewSet(viewsets.ModelViewSet):
         reservation.room.status = "occupied"
         reservation.room.save()
 
-        return Response({
-            "id": reservation.id,
-            "status": reservation.status,
-            "room_status": reservation.room.status,
-            "message": "Guest checked in successfully"
-        })
+        # Return full serialized reservation
+        serializer = self.get_serializer(reservation)
+        return Response(serializer.data)
 
     @action(detail=True, methods=["post"], permission_classes=[IsAdminOrStaff])
     def check_out(self, request, pk=None):
@@ -209,12 +204,9 @@ class ReservationViewSet(viewsets.ModelViewSet):
         reservation.room.status = "cleaning"
         reservation.room.save()
 
-        return Response({
-            "id": reservation.id,
-            "status": reservation.status,
-            "room_status": reservation.room.status,
-            "message": "Guest checked out successfully"
-        })
+        # Return full serialized reservation
+        serializer = self.get_serializer(reservation)
+        return Response(serializer.data)
 
     @action(detail=True, methods=["post"], permission_classes=[IsAdminOrStaff])
     def mark_no_show(self, request, pk=None):
@@ -237,9 +229,6 @@ class ReservationViewSet(viewsets.ModelViewSet):
         reservation.room.status = "available"
         reservation.room.save()
 
-        return Response({
-            "id": reservation.id,
-            "status": reservation.status,
-            "room_status": reservation.room.status,
-            "message": "Reservation marked as no-show"
-        })
+        # Return full serialized reservation
+        serializer = self.get_serializer(reservation)
+        return Response(serializer.data)

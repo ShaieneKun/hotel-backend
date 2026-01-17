@@ -32,7 +32,6 @@ services:
 
   web:
     build: .
-    command: ./.venv/bin/python -m gunicorn hotel.wsgi:application --bind 0.0.0.0:8000 --timeout 120 --workers 2
     ports:
       - "8000:8000"
     depends_on:
@@ -47,6 +46,7 @@ services:
       - DB_PASSWORD=hotel_password
       - DB_HOST=db
       - DB_PORT=5432
+      - REDIS_HOST=redis
       - EMAIL_HOST=mailpit
       - EMAIL_PORT=1025
     extra_hosts:
@@ -71,7 +71,7 @@ services:
       - DB_PASSWORD=hotel_password
       - DB_HOST=db
       - DB_PORT=5432
-      - REDIS_HOST=host.docker.internal
+      - REDIS_HOST=redis
       - EMAIL_HOST=mailpit
       - EMAIL_PORT=1025
     extra_hosts:
@@ -96,9 +96,9 @@ services:
       - DB_PASSWORD=hotel_password
       - DB_HOST=db
       - DB_PORT=5432
+      - REDIS_HOST=redis
       - EMAIL_HOST=mailpit
       - EMAIL_PORT=1025
-      - REDIS_HOST=host.docker.internal
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:

@@ -1,7 +1,7 @@
 [project]
 name = "hotel-backend"
 version = "0.1.0"
-description = "Add your description here"
+description = "Hotel Reservation System - Django REST API Backend"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
@@ -16,4 +16,5 @@ dependencies = [
     "django-cors-headers>=4.9.0",
     "psycopg[binary]",
     "gunicorn>=23.0.0",
+    "pytz>=2024.2",
 ]

@@ -68,6 +68,9 @@ class Reservation(models.Model):
     check_out = models.DateTimeField()
     status = models.CharField(
         max_length=20, choices=STATUS, default="confirmed")
+    total_price = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text="Total price calculated when reservation is confirmed")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -104,10 +107,6 @@ class Reservation(models.Model):
                 f"Room {self.room.number} is already booked for the selected dates."
             )
 
-    def save(self, *args, **kwargs):
-        self.clean()
-        super().save(*args, **kwargs)
-
     @property
     def is_past_checkin(self):
         """Check if check-in date has passed."""
@@ -121,3 +120,19 @@ class Reservation(models.Model):
     def get_status_display(self):
         """Return the human-readable status."""
         return dict(self.STATUS).get(self.status, self.status)
+
+    def calculate_total_price(self):
+        """Calculate total price based on room price and number of nights."""
+        if self.check_in and self.check_out and self.room:
+            nights = (self.check_out - self.check_in).days
+            if nights < 1:
+                nights = 1  # Minimum 1 night
+            return self.room.price * nights
+        return None
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        # Calculate total_price when reservation is confirmed
+        if self.status == "confirmed" and self.total_price is None:
+            self.total_price = self.calculate_total_price()
+        super().save(*args, **kwargs)
