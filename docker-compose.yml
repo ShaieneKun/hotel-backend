@@ -32,7 +32,7 @@ services:
 
   web:
     build: .
-    command: gunicorn hotel.wsgi:application --bind 0.0.0.0:8000
+    command: ./.venv/bin/python -m gunicorn hotel.wsgi:application --bind 0.0.0.0:8000 --timeout 120 --workers 2
     ports:
       - "8000:8000"
     depends_on:
@@ -49,8 +49,8 @@ services:
       - DB_PORT=5432
       - EMAIL_HOST=mailpit
       - EMAIL_PORT=1025
-    profiles:
-      - web
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - hotel-network
 
@@ -109,6 +109,28 @@ services:
     ports:
       - "8025:8025"  # Web UI
       - "1025:1025"  # SMTP
+    networks:
+      - hotel-network
+
+  frontend:
+    image: node:24-alpine
+    working_dir: /app
+    command: sh -c "npm install && npm start"
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./src/frontend:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - HOST=0.0.0.0
+      - WATCHPACK_POLLING=true
+      - CHOKIDAR_USEPOLLING=true
+      - REACT_APP_API_URL=http://localhost:8000
+    depends_on:
+      - web
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - hotel-network
 

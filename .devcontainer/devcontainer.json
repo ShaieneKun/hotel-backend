@@ -3,7 +3,7 @@
 {
 	"name": "Python 3",
 	"image": "mcr.microsoft.com/devcontainers/python:2-3.14-trixie",
-	"postCreateCommand": "uv sync && curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash && export NVM_DIR=\"$HOME/.nvm\" && [ -s \"$NVM_DIR/nvm.sh\" ] && . \"$NVM_DIR/nvm.sh\" && nvm install 24 && nvm use 24 && nvm alias default 24",
+	"postCreateCommand": "pip install uv && uv sync && curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash && export NVM_DIR=\"$HOME/.nvm\" && [ -s \"$NVM_DIR/nvm.sh\" ] && . \"$NVM_DIR/nvm.sh\" && nvm install 24 && nvm use 24 && nvm alias default 24",
 	"customizations": {
 		"vscode": {
 			"extensions": [
