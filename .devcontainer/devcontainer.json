@@ -2,21 +2,26 @@
 // README at: https://github.com/devcontainers/templates/tree/main/src/python
 {
 	"name": "Python 3",
-	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-	"image": "mcr.microsoft.com/devcontainers/python:2-3.14-trixie"
-
+	"image": "mcr.microsoft.com/devcontainers/python:2-3.14-trixie",
+	// Connect to docker-compose devcontainer service
+	"dockerComposeFile": "../docker-compose.yml",
+	"service": "devcontainer",
+	// Install project dependencies after container is created
+	"postCreateCommand": "pip install -e . 2>/dev/null || true",
+	// Forward ports to local machine
+	"forwardPorts": [
+		8000,
+		5432,
+		6379
+	]
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	// "features": {},
-
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],
-
 	// Use 'postCreateCommand' to run commands after the container is created.
 	// "postCreateCommand": "pip3 install --user -r requirements.txt",
-
 	// Configure tool-specific properties.
 	// "customizations": {},
-
 	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
 	// "remoteUser": "root"
 }

@@ -1,0 +1,40 @@
+FROM python:3.14-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies directly (no venv needed in containers)
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel
+
+COPY pyproject.toml ./
+RUN pip install --no-cache-dir \
+    django>=6.0.1 \
+    djangorestframework \
+    djangorestframework-simplejwt \
+    celery \
+    redis \
+    django-celery-beat \
+    django-celery-results \
+    drf-spectacular>=0.29.0 \
+    django-cors-headers>=4.9.0 \
+    "psycopg[binary]"
+
+# Copy application
+COPY . /app
+
+# Copy entrypoint script
+COPY entrypoint-beat.sh /app/entrypoint-beat.sh
+RUN chmod +x /app/entrypoint-beat.sh
+
+# Set working directory to src where Django apps are
+WORKDIR /app/src
+
+# Run entrypoint script
+CMD ["/app/entrypoint-beat.sh"]

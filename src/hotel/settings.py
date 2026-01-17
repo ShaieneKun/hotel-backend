@@ -1,6 +1,7 @@
 """
 Django settings for hotel project (moved to src/).
 """
+import os
 from celery.schedules import crontab
 from pathlib import Path
 from datetime import timedelta
@@ -58,12 +59,31 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "hotel.wsgi.application"
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": str(BASE_DIR / "db.sqlite3"),
+# Database configuration
+# Use environment variables if set (for Docker/devcontainer)
+# Otherwise use SQLite for local development
+DB_HOST = os.environ.get("DB_HOST")
+
+if DB_HOST:
+    # Docker or devcontainer - use PostgreSQL
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": os.environ.get("DB_NAME", "hotel"),
+            "USER": os.environ.get("DB_USER", "hotel"),
+            "PASSWORD": os.environ.get("DB_PASSWORD", "hotel_password"),
+            "HOST": DB_HOST,
+            "PORT": os.environ.get("DB_PORT", "5432"),
+        }
     }
-}
+else:
+    # Local development without Docker - use SQLite
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": str(BASE_DIR / "db.sqlite3"),
+        }
+    }
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator", },
@@ -92,7 +112,11 @@ SIMPLE_JWT = {
 }
 
 # Celery configuration
-CELERY_BROKER_URL = "redis://redis:6379/0"
+# Use environment variables if set (for Docker/devcontainer)
+# Otherwise use localhost for local development
+REDIS_HOST = os.environ.get("REDIS_HOST", "localhost")
+
+CELERY_BROKER_URL = f"redis://{REDIS_HOST}:6379/0"
 CELERY_RESULT_BACKEND = "django-db"
 CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
 

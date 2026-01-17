@@ -1,29 +1,108 @@
-version: '3.8'
 services:
+  devcontainer:
+    image: mcr.microsoft.com/devcontainers/python:2-3.14-trixie
+    working_dir: /workspaces/hotel-backend
+    volumes:
+      - .:/workspaces/hotel-backend
+    environment:
+      - DEVCONTAINER=true
+      - DB_HOST=db
+      - DB_NAME=hotel
+      - DB_USER=hotel
+      - DB_PASSWORD=hotel_password
+      - DB_PORT=5432
+      - REDIS_HOST=redis
+      - DJANGO_SETTINGS_MODULE=hotel.settings
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: /bin/bash
+    stdin_open: true
+    tty: true
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_DB=hotel
+      - POSTGRES_USER=hotel
+      - POSTGRES_PASSWORD=hotel_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hotel"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
   web:
     build: .
     command: gunicorn hotel.wsgi:application --bind 0.0.0.0:8000
     ports:
       - "8000:8000"
     depends_on:
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
     environment:
       - DJANGO_SETTINGS_MODULE=hotel.settings
+      - DB_NAME=hotel
+      - DB_USER=hotel
+      - DB_PASSWORD=hotel_password
+      - DB_HOST=db
+      - DB_PORT=5432
+    profiles:
+      - web
+
   celery:
-    build: .
-    command: celery -A hotel worker --loglevel=info
+    build:
+      context: .
+      dockerfile: Dockerfile.celery
     depends_on:
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
     environment:
       - DJANGO_SETTINGS_MODULE=hotel.settings
+      - PYTHONPATH=/app/src
+      - DB_NAME=hotel
+      - DB_USER=hotel
+      - DB_PASSWORD=hotel_password
+      - DB_HOST=db
+      - DB_PORT=5432
+
   beat:
-    build: .
-    command: celery -A hotel beat --loglevel=info
+    build:
+      context: .
+      dockerfile: Dockerfile.beat
     depends_on:
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
     environment:
       - DJANGO_SETTINGS_MODULE=hotel.settings
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
+      - PYTHONPATH=/app/src
+      - DB_NAME=hotel
+      - DB_USER=hotel
+      - DB_PASSWORD=hotel_password
+      - DB_HOST=db
+      - DB_PORT=5432
+
+volumes:
+  postgres_data:

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import roomService from '../api/roomService';
+import reservationService from '../api/reservationService';
 import authService from '../api/authService';
 import './RoomPages.css';
 
@@ -11,6 +12,14 @@ function RoomDetailPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [isEditing, setIsEditing] = useState(false);
+    const [showBookingForm, setShowBookingForm] = useState(false);
+    const [bookingData, setBookingData] = useState({
+        check_in: '',
+        check_out: '',
+        notes: '',
+    });
+    const [bookingError, setBookingError] = useState('');
+    const [bookingLoading, setBookingLoading] = useState(false);
     const [formData, setFormData] = useState({});
     const user = authService.getCurrentUser();
 
@@ -55,6 +64,38 @@ function RoomDetailPage() {
             } catch (err) {
                 setError('Failed to delete room');
             }
+        }
+    };
+
+    const handleBookingChange = (e) => {
+        setBookingData({
+            ...bookingData,
+            [e.target.name]: e.target.value,
+        });
+    };
+
+    const handleBookRoom = async (e) => {
+        e.preventDefault();
+        setBookingError('');
+        setBookingLoading(true);
+
+        try {
+            const reservationData = {
+                room_id: parseInt(id),
+                check_in: bookingData.check_in,
+                check_out: bookingData.check_out,
+                notes: bookingData.notes,
+            };
+            const result = await reservationService.createReservation(reservationData);
+            setShowBookingForm(false);
+            navigate(`/reservations/${result.id}`);
+        } catch (err) {
+            const errorMessage = err.response?.data?.non_field_errors?.[0] ||
+                err.response?.data?.detail ||
+                'Failed to create reservation';
+            setBookingError(errorMessage);
+        } finally {
+            setBookingLoading(false);
         }
     };
 
@@ -107,6 +148,23 @@ function RoomDetailPage() {
                                     <button onClick={handleDelete} className="btn btn-danger">
                                         Delete Room
                                     </button>
+                                </div>
+                            )}
+
+                            {user?.role === 'client' && room.status === 'available' && (
+                                <div className="room-detail-actions">
+                                    <button
+                                        onClick={() => setShowBookingForm(!showBookingForm)}
+                                        className="btn btn-success"
+                                    >
+                                        {showBookingForm ? 'Cancel Booking' : '📅 Book This Room'}
+                                    </button>
+                                </div>
+                            )}
+
+                            {user?.role === 'client' && room.status !== 'available' && (
+                                <div className="alert alert-info">
+                                    This room is currently {room.status} and cannot be booked.
                                 </div>
                             )}
                         </div>
@@ -186,6 +244,81 @@ function RoomDetailPage() {
                                     Cancel
                                 </button>
                             </div>
+                        </div>
+                    )}
+
+                    {showBookingForm && user?.role === 'client' && (
+                        <div className="booking-form">
+                            <h3>Book Room {room.number}</h3>
+                            {bookingError && <div className="alert alert-error">{bookingError}</div>}
+
+                            <form onSubmit={handleBookRoom}>
+                                <div className="form-row">
+                                    <div className="form-group">
+                                        <label htmlFor="check_in">Check-in Date & Time *</label>
+                                        <input
+                                            id="check_in"
+                                            type="datetime-local"
+                                            name="check_in"
+                                            value={bookingData.check_in}
+                                            onChange={handleBookingChange}
+                                            required
+                                            disabled={bookingLoading}
+                                        />
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label htmlFor="check_out">Check-out Date & Time *</label>
+                                        <input
+                                            id="check_out"
+                                            type="datetime-local"
+                                            name="check_out"
+                                            value={bookingData.check_out}
+                                            onChange={handleBookingChange}
+                                            min={bookingData.check_in ? new Date(new Date(bookingData.check_in).getTime() + 24 * 60 * 60 * 1000).toISOString().slice(0, 16) : ''}
+                                            required
+                                            disabled={bookingLoading}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="form-group">
+                                    <label htmlFor="notes">Notes / Special Requests</label>
+                                    <textarea
+                                        id="notes"
+                                        name="notes"
+                                        value={bookingData.notes}
+                                        onChange={handleBookingChange}
+                                        placeholder="Any special requests or additional information..."
+                                        rows="4"
+                                        disabled={bookingLoading}
+                                    />
+                                </div>
+
+                                <div className="booking-summary">
+                                    <p><strong>Price per night:</strong> ${room.price}</p>
+                                    <p><strong>Room type:</strong> {room.room_type}</p>
+                                    <p><strong>Capacity:</strong> {room.capacity} guests</p>
+                                </div>
+
+                                <div className="form-actions">
+                                    <button type="submit" className="btn btn-success" disabled={bookingLoading}>
+                                        {bookingLoading ? <span className="spinner"></span> : '✓ Confirm Booking'}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="btn btn-secondary"
+                                        onClick={() => {
+                                            setShowBookingForm(false);
+                                            setBookingData({ check_in: '', check_out: '', notes: '' });
+                                            setBookingError('');
+                                        }}
+                                        disabled={bookingLoading}
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
+                            </form>
                         </div>
                     )}
                 </div>
